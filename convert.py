@@ -1,4 +1,4 @@
-"""Convert a Transcriber TRS subtitle file into the WEBVTT format."""
+"""Convert a Transcriber TRS subtitle file into the WebVTT format."""
 
 import argparse
 import datetime
@@ -6,14 +6,8 @@ import sys
 from xml.etree import ElementTree
 
 
-def format_time(time: str):
-    """Convert ssss[.sss] into hh:mm:ss.sss format.
-
-    :param time: Time code in seconds as extracted from the TRS input file
-    :type time: str
-    :returns: Time code infixed-length hh:mm:ss.sss format
-    :rtype: str
-    """
+def format_timecode(timecode: str):
+    """Convert ssss[.sss] into hh:mm:ss.sss format."""
     time = "0" + str(datetime.timedelta(seconds=float(time)))[:11]
     if "." in time:
         # Add 1 or 2 zeros so the ms suffix has a length of 3
@@ -22,16 +16,8 @@ def format_time(time: str):
 
 
 def generate_timestamp(start_time: str, end_time: str) -> str:
-    """Generate a WEBTTV-format time stamp 'hh:mm:ss.sss --> hh:mm:ss.sss.'
-
-    :param start_time: Time code in seconds as extracted from the TRS file
-    :type start_time: str
-    :param end_time: Time code in seconds as extracted from the TRS file
-    :type end_time: str
-    :returns: Time stamp in format hh:mm:ss.sss --> hh:mm:ss.sss
-    :rtype: str
-    """
-    return "{0} --> {1}".format(format_time(start_time), format_time(end_time))
+    """Generate a WebTTV-format timestamp 'hh:mm:ss.sss --> hh:mm:ss.sss.'"""
+    return "{0} --> {1}".format(format_timecode(start_time), format_timecode(end_time))
 
 
 def convert(
@@ -40,19 +26,7 @@ def convert(
     add_speakers: bool = False,
     preserve_noise: bool = False,
 ) -> str:
-    """Read and parse input file.
-
-    :param input_file: Path to the input TRS file.
-    :type input_file: str
-    :param language: Language code to add as a prefix
-    :type language: str
-    :param add_speakers: Prepend speaker names to lines
-    :type add_speakers: bool
-    :param noise: Preserve noise such as laughter or hesitation
-    :type noise: bool
-    :returns: Input file in WEBVTT format.
-    :rtype: str
-    """
+    """Read TRS input file and return it in WebVVT format."""
     noise = {
         "COUGH": " <i>(coughs)</i> ",
         "EE-HESITATION": " <i>(hesitates)</i> ",
@@ -74,7 +48,7 @@ def convert(
         for speaker in root.find("Speakers").iter("Speaker")
     }
 
-    # Add file prefix
+    # Add file header
     vtt_lines = ["WEBVTT"]
     if language:
         vtt_lines.append("Language: {}".format(language))
@@ -120,12 +94,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Convert a TRS subtitle file to the WebVTT format."
     )
-    parser.add_argument("input", help="Path to the input file")
+    parser.add_argument("input", metavar="INPUTFILE", help="Path to the input file")
     parser.add_argument(
         "-o",
         "--output",
         required=False,
-        nargs="?",
+        nargs=1,
         metavar="PATH",
         help="Write output to PATH instead of STDOUT",
     )
@@ -133,16 +107,16 @@ if __name__ == "__main__":
         "-l",
         "--language",
         required=False,
-        nargs="?",
+        nargs=1,
         metavar="LANG",
-        help="Add 'Language: LANG' prefix to output",
+        help="Add 'Language: LANG' header to output",
     )
     parser.add_argument(
         "-s",
         "--speakers",
         required=False,
         action="store_true",
-        help="Add speaker metadata to each line",
+        help="Add speaker metadata to applicable lines",
     )
     parser.add_argument(
         "-n",
@@ -153,10 +127,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    vtt = convert(args.input, args.language, args.speakers, args.noise)
+    vtt = convert(args.input, args.language[0], args.speakers, args.noise)
 
     if args.output:
-        with open(args.output, "w", encoding="utf-8") as handle:
+        with open(args.output[0], "w", encoding="utf-8") as handle:
             handle.write(vtt)
     else:
         sys.stdout.write(vtt)
