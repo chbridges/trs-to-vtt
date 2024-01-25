@@ -9,7 +9,7 @@ from xml.etree import ElementTree
 
 def format_timecode(timecode: str):
     """Convert ssss[.sss] into hh:mm:ss.sss format."""
-    time = "0" + str(datetime.timedelta(seconds=float(time)))[:11]
+    time = "0" + str(datetime.timedelta(seconds=float(timecode)))[:11]
     if "." in time:
         # Add 1 or 2 zeros so the ms suffix has a length of 3
         return time + "0" * (12 - len(time))
@@ -47,7 +47,8 @@ def convert(
     }
 
     with open(input_path, "r", encoding="CP1250") as file:
-        tree = ElementTree.parse(file)
+        parser = ElementTree.XMLParser(encoding="CP1250")
+        tree = ElementTree.parse(file, parser)
         root = tree.getroot()
 
     speakers = {
@@ -134,12 +135,11 @@ if __name__ == "__main__":
         help="Preserve noise such as laughter or silence",
     )
     args = parser.parse_args()
-    print(args)
 
     vtt = convert(args.input, args.language, args.speakers, args.noise)
 
     if args.output:
-        with open(args.output[0], "w", encoding="utf-8") as handle:
+        with open(args.output[0], "w", encoding="CP1250") as handle:
             handle.write(vtt)
     else:
         sys.stdout.write(vtt)
