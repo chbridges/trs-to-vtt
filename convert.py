@@ -3,6 +3,7 @@
 import argparse
 import datetime
 import sys
+from typing import Optional
 from xml.etree import ElementTree
 
 
@@ -22,7 +23,7 @@ def generate_timestamp(start_time: str, end_time: str) -> str:
 
 def convert(
     input_path: str,
-    language: str = "",
+    language: Optional[str] = None,
     add_speakers: bool = False,
     preserve_noise: bool = False,
 ) -> str:
@@ -39,7 +40,7 @@ def convert(
         "UNINTELLIGIBLE": " <i>(unintelligible)</i> ",
     }
 
-    with open(input_path, "r", encoding="utf-8") as file:
+    with open(input_path, "r", encoding="CP1250") as file:
         tree = ElementTree.parse(file)
         root = tree.getroot()
 
@@ -99,7 +100,6 @@ if __name__ == "__main__":
         "-o",
         "--output",
         required=False,
-        nargs=1,
         metavar="PATH",
         help="Write output to PATH instead of STDOUT",
     )
@@ -107,7 +107,6 @@ if __name__ == "__main__":
         "-l",
         "--language",
         required=False,
-        nargs=1,
         metavar="LANG",
         help="Add 'Language: LANG' header to output",
     )
@@ -126,8 +125,9 @@ if __name__ == "__main__":
         help="Preserve noise such as laughter or silence",
     )
     args = parser.parse_args()
+    print(args)
 
-    vtt = convert(args.input, args.language[0], args.speakers, args.noise)
+    vtt = convert(args.input, args.language, args.speakers, args.noise)
 
     if args.output:
         with open(args.output[0], "w", encoding="utf-8") as handle:
