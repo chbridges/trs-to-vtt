@@ -4,8 +4,16 @@ import argparse
 import datetime
 import re
 import sys
+from collections import OrderedDict
 from typing import Optional
 from xml.etree import ElementTree
+
+
+def get_encoding(input_path: str) -> str:
+    """Extract the file encoding from the XML header."""
+    with open(input_path, "r", encoding="ISO-8859-1") as file:
+        header = file.readline()
+    return header.split('"')[-2]
 
 
 def format_timecode(timecode: str):
@@ -19,11 +27,12 @@ def format_timecode(timecode: str):
 
 def generate_timestamp(start_time: str, end_time: str) -> str:
     """Generate a WebTTV-format timestamp 'hh:mm:ss.sss --> hh:mm:ss.sss'."""
-    return "{0} --> {1}".format(format_timecode(start_time), format_timecode(end_time))
+    return f"{format_timecode(start_time)} --> {format_timecode(end_time)}"
 
 
 def convert(
     input_path: str,
+    encoding: str,
     language: Optional[str] = None,
     add_speakers: bool = False,
     preserve_noise: bool = False,
@@ -48,20 +57,20 @@ def convert(
         "unintelligible": " <i>(unintelligible)</i> ",
     }
 
-    with open(input_path, "r", encoding="CP1250") as file:
-        xml_parser = ElementTree.XMLParser(encoding="CP1250")
+    with open(input_path, "r", encoding=encoding) as file:
+        xml_parser = ElementTree.XMLParser(encoding=encoding)
         tree = ElementTree.parse(file, xml_parser)
         root = tree.getroot()
 
-    speaker_dict = {
-        speaker.attrib["id"]: speaker.attrib["name"]
-        for speaker in root.find("Speakers").iter("Speaker")
-    }
+    # OrderedDict as a fallback for erroneous speaker annotations
+    speaker_dict = OrderedDict()
+    for speaker in root.find("Speakers").iter("Speaker"):
+        speaker_dict[speaker.attrib["id"]] = speaker.attrib["name"]
 
     # Add file header
     vtt_lines = ["WEBVTT"]
     if language:
-        vtt_lines.append("Language: {}".format(language))
+        vtt_lines.append(f"Language: {language}")
     vtt_lines.append("")
 
     # Iterate the speaker turns
@@ -71,8 +80,7 @@ def convert(
                 speaker_dict.get(speaker, "")
                 for speaker in turn.attrib.get("speaker", "").split()
             ]
-            if speakers:
-                speaker_prefix = "<v {}>".format(speakers[0])
+            speaker_prefix = f"<v {speakers[0]}>" if speakers else ""
             start_time = turn.attrib["startTime"]
             end_time = ""
             text = ""
@@ -91,9 +99,13 @@ def convert(
                     start_time = end_time
                 # Update the active speaker if the turn has multiple speakers
                 elif annotation.tag == "Who":
-                    speaker_prefix = "<v {}>".format(
-                        speakers[int(annotation.attrib["nb"]) - 1]
-                    )
+                    speaker_idx = int(annotation.attrib["nb"]) - 1
+                    if speaker_idx < len(speakers):
+                        speaker = speakers[speaker_idx]
+                    else:
+                        # Fallback to speaker metadata if ill-defined header
+                        speaker = list(speaker_dict.values())[speaker_idx]
+                    speaker_prefix = f"<v {speaker}>"
                 # Events themselves are added only if preserve_noise == True
                 elif annotation.tag == "Event":
                     if (
@@ -103,9 +115,7 @@ def convert(
                         text = text + noise[annotation.attrib["desc"].lower()]
                 # Comments are dropped; discover unhandled nodes
                 elif annotation.tag != "Comment":
-                    raise ValueError(
-                        "Unknown annotation node: {}".format(annotation.tag)
-                    )
+                    raise ValueError(f"Unknown annotation node: {annotation.tag}")
                 # Finally, add the tailing text (if existing)
                 text = text + annotation.tail.strip()
             # Handle text line at the end of turn
@@ -158,7 +168,9 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    vtt = convert(args.input, args.language, args.speakers, args.noise)
+    # Conversion 
+    encoding = get_encoding(args.input)
+    vtt = convert(args.input, encoding, args.language, args.speakers, args.noise)
 
     if args.output:
         with open(args.output, "w", encoding="utf-8") as handle:
