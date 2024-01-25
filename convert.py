@@ -38,25 +38,6 @@ def convert(
     preserve_noise: bool = False,
 ) -> str:
     """Read TRS input file and return it in WebVVT format."""
-    noise = {
-        "breath": " <i>(breaths)</i> ",
-        "click": " <i>(clicks tongue)</i> ",
-        "cough": " <i>(coughs)</i> ",
-        "ee-hesitation": " <i>(hesitates)</i> ",
-        "inhale": " <i>(inhales)</i> ",
-        "laugh": " <i>(laughs)</i> ",
-        "laughter": " <i>(laughs)</i> ",
-        "lip_smack": " <i>(smacks lips)</i> ",
-        "loud_breath": " <i>(breaths loudly)</i> ",
-        "mouth": " <i>(opens mouth)</i> ",
-        "noise": " <i>(noise)</i> ",
-        "silence": " <i>(silence)</i> ",
-        "uh": " <i>(uh)</i> ",
-        "uh-huh": " <i>(uh-huh)</i> ",
-        "um": " <i>(um)</i> ",
-        "unintelligible": " <i>(unintelligible)</i> ",
-    }
-
     with open(input_path, "r", encoding=encoding) as file:
         xml_parser = ElementTree.XMLParser(encoding=encoding)
         tree = ElementTree.parse(file, xml_parser)
@@ -111,8 +92,10 @@ def convert(
                     if (
                         preserve_noise
                         and annotation.attrib["extent"] == "instantaneous"
+                        and "/" not in annotation.attrib["desc"]
                     ):
-                        text = text + noise[annotation.attrib["desc"].lower()]
+                        desc = annotation.attrib["desc"].strip().lower()
+                        text = text + f" <i>({desc})</i> "
                 # Comments are dropped; discover unhandled nodes
                 elif annotation.tag != "Comment":
                     raise ValueError(f"Unknown annotation node: {annotation.tag}")
@@ -168,7 +151,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # Conversion 
+    # Conversion
     encoding = get_encoding(args.input)
     vtt = convert(args.input, encoding, args.language, args.speakers, args.noise)
 
