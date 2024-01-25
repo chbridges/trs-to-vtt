@@ -161,7 +161,7 @@ if __name__ == "__main__":
     vtt = convert(args.input, args.language, args.speakers, args.noise)
 
     if args.output:
-        with open(args.output, "w", encoding="CP1250") as handle:
+        with open(args.output, "w", encoding="utf-8") as handle:
             handle.write(vtt)
     else:
         sys.stdout.write(vtt)
