@@ -2,6 +2,7 @@
 
 import argparse
 import datetime
+import re
 import sys
 from typing import Optional
 from xml.etree import ElementTree
@@ -17,7 +18,7 @@ def format_timecode(timecode: str):
 
 
 def generate_timestamp(start_time: str, end_time: str) -> str:
-    """Generate a WebTTV-format timestamp 'hh:mm:ss.sss --> hh:mm:ss.sss.'"""
+    """Generate a WebTTV-format timestamp 'hh:mm:ss.sss --> hh:mm:ss.sss'."""
     return "{0} --> {1}".format(format_timecode(start_time), format_timecode(end_time))
 
 
@@ -31,27 +32,28 @@ def convert(
     noise = {
         "breath": " <i>(breaths)</i> ",
         "click": " <i>(clicks tongue)</i> ",
-        "COUGH": " <i>(coughs)</i> ",
-        "EE-HESITATION": " <i>(hesitates)</i> ",
+        "cough": " <i>(coughs)</i> ",
+        "ee-hesitation": " <i>(hesitates)</i> ",
         "inhale": " <i>(inhales)</i> ",
-        "LAUGHTER": " <i>(laughs)</i> ",
-        "LIP_SMACK": " <i>(smacks lips)</i> ",
-        "LOUD_BREATH": " <i>(breaths loudly)</i> ",
+        "laugh": " <i>(laughs)</i> ",
+        "laughter": " <i>(laughs)</i> ",
+        "lip_smack": " <i>(smacks lips)</i> ",
+        "loud_breath": " <i>(breaths loudly)</i> ",
         "mouth": " <i>(opens mouth)</i> ",
-        "NOISE": " <i>(noise)</i> ",
-        "SILENCE": " <i>(silence)</i> ",
-        "UH": " <i>(uh)</i> ",
-        "UH-HUH": " <i>(uh-huh)</i> ",
-        "UM": " <i>(um)</i> ",
-        "UNINTELLIGIBLE": " <i>(unintelligible)</i> ",
+        "noise": " <i>(noise)</i> ",
+        "silence": " <i>(silence)</i> ",
+        "uh": " <i>(uh)</i> ",
+        "uh-huh": " <i>(uh-huh)</i> ",
+        "um": " <i>(um)</i> ",
+        "unintelligible": " <i>(unintelligible)</i> ",
     }
 
     with open(input_path, "r", encoding="CP1250") as file:
-        parser = ElementTree.XMLParser(encoding="CP1250")
-        tree = ElementTree.parse(file, parser)
+        xml_parser = ElementTree.XMLParser(encoding="CP1250")
+        tree = ElementTree.parse(file, xml_parser)
         root = tree.getroot()
 
-    speakers = {
+    speaker_dict = {
         speaker.attrib["id"]: speaker.attrib["name"]
         for speaker in root.find("Speakers").iter("Speaker")
     }
@@ -65,8 +67,12 @@ def convert(
     # Iterate the speaker turns
     for section in root.find("Episode").iter("Section"):
         for turn in section.iter("Turn"):
-            speaker = speakers.get(turn.attrib.get("speaker", ""), "")
-            speaker_prefix = "<v {}>".format(speaker)
+            speakers = [
+                speaker_dict.get(speaker, "")
+                for speaker in turn.attrib.get("speaker", "").split()
+            ]
+            if speakers:
+                speaker_prefix = "<v {}>".format(speakers[0])
             start_time = turn.attrib["startTime"]
             end_time = ""
             text = ""
@@ -82,23 +88,39 @@ def convert(
                         vtt_lines.append(add_speakers * speaker_prefix + text.strip())
                         vtt_lines.append("")
                         text = ""
-                    text = text + annotation.tail.strip()
                     start_time = end_time
+                # Update the active speaker if the turn has multiple speakers
+                elif annotation.tag == "Who":
+                    speaker_prefix = "<v {}>".format(
+                        speakers[int(annotation.attrib["nb"]) - 1]
+                    )
                 # Events themselves are added only if preserve_noise == True
-                elif (
-                    annotation.tag == "Event"
-                    and annotation.attrib["extent"] == "instantaneous"
-                ):
-                    if preserve_noise:
-                        text = text + noise[annotation.attrib["desc"]]
-                    text = text + annotation.tail.strip()
+                elif annotation.tag == "Event":
+                    if (
+                        preserve_noise
+                        and annotation.attrib["extent"] == "instantaneous"
+                    ):
+                        text = text + noise[annotation.attrib["desc"].lower()]
+                # Comments are dropped; discover unhandled nodes
+                elif annotation.tag != "Comment":
+                    raise ValueError(
+                        "Unknown annotation node: {}".format(annotation.tag)
+                    )
+                # Finally, add the tailing text (if existing)
+                text = text + annotation.tail.strip()
             # Handle text line at the end of turn
             if text:
                 vtt_lines.append(generate_timestamp(start_time, turn.attrib["endTime"]))
                 vtt_lines.append(add_speakers * speaker_prefix + text.strip())
                 vtt_lines.append("")
 
-    return "\n".join(vtt_lines)
+    vtt = "\n".join(vtt_lines)
+
+    # If --noise, patterns such as <i>(laughs)</i>  <i>(inhales)</i> are possible
+    if preserve_noise:
+        vtt = re.sub("  ", " ", vtt)
+
+    return vtt
 
 
 if __name__ == "__main__":
