@@ -29,14 +29,20 @@ def convert(
 ) -> str:
     """Read TRS input file and return it in WebVVT format."""
     noise = {
+        "breath": " <i>(breaths)</i> ",
+        "click": " <i>(clicks tongue)</i> ",
         "COUGH": " <i>(coughs)</i> ",
         "EE-HESITATION": " <i>(hesitates)</i> ",
+        "inhale": " <i>(inhales)</i> ",
         "LAUGHTER": " <i>(laughs)</i> ",
         "LIP_SMACK": " <i>(smacks lips)</i> ",
         "LOUD_BREATH": " <i>(breaths loudly)</i> ",
+        "mouth": " <i>(opens mouth)</i> ",
         "NOISE": " <i>(noise)</i> ",
         "SILENCE": " <i>(silence)</i> ",
+        "UH": " <i>(uh)</i> ",
         "UH-HUH": " <i>(uh-huh)</i> ",
+        "UM": " <i>(um)</i> ",
         "UNINTELLIGIBLE": " <i>(unintelligible)</i> ",
     }
 
@@ -78,7 +84,10 @@ def convert(
                     text = text + annotation.tail.strip()
                     start_time = end_time
                 # Events themselves are added only if preserve_noise == True
-                elif annotation.tag == "Event":
+                elif (
+                    annotation.tag == "Event"
+                    and annotation.attrib["extent"] == "instantaneous"
+                ):
                     if preserve_noise:
                         text = text + noise[annotation.attrib["desc"]]
                     text = text + annotation.tail.strip()
