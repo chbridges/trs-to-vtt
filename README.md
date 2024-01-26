@@ -6,7 +6,7 @@ The only other script I found to convert TRS files is [geomedialab/convert-trs-s
 However, next to an easily fixable bug when encountering specific timecodes, it loses most temporal information when processing long segments by a single speaker.
 I thus found it easier to write my own script and skip the intermediate conversion from [SubRip](https://en.wikipedia.org/wiki/SubRip) to WebVTT, which can be done, e.g., using [nwoltman/srt-to-vtt-converter](https://github.com/nwoltman/srt-to-vtt-converter).
 
-The script does not handle the named entity annotations described in the [TranscriberAG manual](https://transag.sourceforge.net/index.php?content=manual#annotation_menu).
+The script does not handle the named entity annotations described in the [TranscriberAG manual](https://transag.sourceforge.net/index.php?content=manual#annotation_menu), and comments are currently removed.
 
 ## Requirements
 Python 3.6+
