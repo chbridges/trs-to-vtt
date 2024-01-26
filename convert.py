@@ -102,7 +102,7 @@ def convert(
                 # Finally, add the tailing text (if existing)
                 text = text + " " + annotation.tail.strip()
             # Handle text line at the end of turn
-            if text:
+            if text.strip():
                 vtt_lines.append(generate_timestamp(start_time, turn.attrib["endTime"]))
                 vtt_lines.append(add_speakers * speaker_prefix + text.strip())
                 vtt_lines.append("")
@@ -156,7 +156,7 @@ if __name__ == "__main__":
     vtt = convert(args.input, encoding, args.language, args.speakers, args.noise)
 
     if args.output:
-        with open(args.output, "w", encoding="utf-8") as handle:
-            handle.write(vtt)
+        with open(args.output, "w", encoding="utf-8") as output_file:
+            output_file.write(vtt)
     else:
         sys.stdout.write(vtt)
