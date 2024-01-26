@@ -72,7 +72,7 @@ def convert(
                 # New lines are added at synchronization points
                 if annotation.tag == "Sync":
                     end_time = annotation.attrib["time"]
-                    if text:
+                    if text.strip():
                         vtt_lines.append(generate_timestamp(start_time, end_time))
                         vtt_lines.append(add_speakers * speaker_prefix + text.strip())
                         vtt_lines.append("")
