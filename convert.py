@@ -100,7 +100,7 @@ def convert(
                 elif annotation.tag != "Comment":
                     raise ValueError(f"Unknown annotation node: {annotation.tag}")
                 # Finally, add the tailing text (if existing)
-                text = text + annotation.tail.strip()
+                text = text + " " + annotation.tail.strip()
             # Handle text line at the end of turn
             if text:
                 vtt_lines.append(generate_timestamp(start_time, turn.attrib["endTime"]))
