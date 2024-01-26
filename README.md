@@ -7,7 +7,7 @@ However, next to an easily fixable bug when encountering specific timecodes, it 
 I thus found it easier to write my own script and skip the intermediate conversion from [SubRip](https://en.wikipedia.org/wiki/SubRip) to WebVTT, which can be done, e.g., using [nwoltman/srt-to-vtt-converter](https://github.com/nwoltman/srt-to-vtt-converter).
 
 ## Requirements
-Python 3.3+
+Python 3.6+
 
 There are no other dependencies unless you want to replace the vulnerable standard XML library with [defusedxml](https://pypi.org/project/defusedxml/).
 
@@ -21,10 +21,8 @@ The `-l` or `--language` argument adds a language header to the file.
 
 When using `-s` or `--speakers`, each spoken line is prefixed with `<v SPEAKER>`, if this information is annotated.
 
-When using `-n` or `--noise`, noise events such as *(laughs)*, *(breathes loudly)*, *(silence)*, or *(unintelligible)* are preserved.
+When using `-n` or `--noise`, noise events such as *(laughter)*, *(silence)*, or *(unintelligible)* are preserved.
 
 ## Limitations
-
-With the `--noise` argument, the program might currently crash when encountering events that were not part of my test data.
 
 The script does not handle the named entity annotations described in the [TranscriberAG manual](https://transag.sourceforge.net/index.php?content=manual#annotation_menu).
